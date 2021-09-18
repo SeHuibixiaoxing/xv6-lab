@@ -3,11 +3,11 @@
 操作系统课程设计
 
 完成情况：
-| 实验 | 完成日期 | 所在分支|
+| 实验 | 完成日期 | 所在分支 |
 | --- | --- | -- |
 | Lab Utilities | 21.09.16 | Util |
-| Lab System calls | 进行中| syscall |
-| Lab Page tables | 未开始 | |
+| Lab System calls | 21.09.18 | Syscall |
+| Lab Page tables | 进行中 | |
 | Lab Traps | | |
 | Lab Lazy allocation | | |
 | Lab Copy on-write | | |
