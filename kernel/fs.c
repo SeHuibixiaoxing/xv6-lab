@@ -480,7 +480,7 @@ void itrunc(struct inode *ip)
 
   if (ip->addrs[NDIRECT + 1])
   {
-    bp = bread(ip->dev, ip->addrs[NDIRECT]);
+    bp = bread(ip->dev, ip->addrs[NDIRECT + 1]);
     a = (uint *)bp->data;
     for (j = 0; j < NINDIRECT; j++)
     {
@@ -499,7 +499,7 @@ void itrunc(struct inode *ip)
     }
     brelse(bp);
 
-    bfree(ip->dev, ip->addrs[NDIRECT]);
+    bfree(ip->dev, ip->addrs[NDIRECT + 1]);
     ip->addrs[NDIRECT + 1] = 0;
   }
 
