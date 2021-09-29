@@ -7,8 +7,8 @@
 | --- | --- | -- |
 | Lab Utilities | 21.09.16 | Util |
 | Lab System calls | 21.09.18 | Syscall |
-| Lab Page tables | 进行中 | |
-| Lab Traps | | |
+| Lab Page tables | 21.09.29 | pgtbl |
+| Lab Traps | 进行中 | |
 | Lab Lazy allocation | | |
 | Lab Copy on-write | | |
 | Lab Multithreading | | |
