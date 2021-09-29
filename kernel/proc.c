@@ -18,7 +18,7 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
-void proc_free_kernelpagetable(pagetable_t kpagetable, uint64 kstack);
+void proc_free_kernelpagetable(pagetable_t kpagetable, uint64 kstack, int sz);
 
 extern char trampoline[]; // trampoline.S
 
@@ -172,7 +172,7 @@ freeproc(struct proc *p)
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
 
-  proc_free_kernelpagetable(p->kpagetable, p->kstack);
+  proc_free_kernelpagetable(p->kpagetable, p->kstack, p->sz);
   p->kpagetable = 0;
 
   p->pagetable = 0;
@@ -232,12 +232,12 @@ void proc_freepagetable(pagetable_t pagetable, uint64 sz)
 
 // Free a process's kernel page table, and free the
 // physical memory it refers to.
-void proc_free_kernelpagetable(pagetable_t kpagetable, uint64 kstack)
+void proc_free_kernelpagetable(pagetable_t kpagetable, uint64 kstack, int sz)
 {
-  unvminit(kpagetable);
+  unvminit(kpagetable, sz);
   uvmunmap(kpagetable, kstack, 1, 1);
-
-  freewalk(kpagetable);
+  uvmunmap(kpagetable, 0, sz / PGSIZE - 1, 0);
+  prockernelfreewalk(kpagetable);
 }
 
 // a user program that calls exec("/init")
@@ -264,7 +264,7 @@ void userinit(void)
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
 
-  if (u2kvmcopy(p->pagetable, p->kpagetable, p->sz))
+  if (u2kvmcopy(p->pagetable, p->kpagetable, 0, p->sz))
   {
     panic("userinit");
   }
@@ -285,7 +285,6 @@ void userinit(void)
 // Return 0 on success, -1 on failure.
 int growproc(int n)
 {
-  printf("*");
   uint sz;
   struct proc *p = myproc();
 
@@ -300,16 +299,21 @@ int growproc(int n)
     {
       return -1;
     }
-    if (u2kvmcopy(p->pagetable, p->kpagetable, sz))
+    if (u2kvmcopy(p->pagetable, p->kpagetable, p->sz, n))
     {
       panic("growproc");
     }
   }
   else if (n < 0)
   {
+    uint64 oldsz = sz;
+
+    // printf("#");
+    uint64 npages = (PGROUNDUP(oldsz) - PGROUNDUP(sz)) / PGSIZE;
+    uvmunmap(p->kpagetable, PGROUNDUP(sz), npages, 0);
+    // printf("*");
+
     sz = uvmdealloc(p->pagetable, sz, sz + n);
-    int npages = (PGROUNDUP(p->sz) - PGROUNDUP(p->sz + n)) / PGSIZE;
-    uvmunmap(p->kpagetable, PGROUNDUP(p->sz + n), npages, 0);
   }
   p->sz = sz;
 
@@ -360,7 +364,7 @@ int fork(void)
 
   np->state = RUNNABLE;
 
-  if (u2kvmcopy(np->pagetable, np->kpagetable, np->sz) == -1)
+  if (u2kvmcopy(np->pagetable, np->kpagetable, 0, np->sz))
   {
     freeproc(np);
     release(&np->lock);

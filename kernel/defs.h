@@ -108,9 +108,9 @@ void yield(void);
 int either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void procdump(void);
-void proc_free_kernelpagetable(pagetable_t kpagetable, uint64 kstack);
 int u2kmappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm);
-int u2kvmcopy(pagetable_t old, pagetable_t new, uint64 sz);
+int u2kvmcopy(pagetable_t old, pagetable_t new, uint64 begin, uint64 sz);
+void proc_free_kernelpagetable(pagetable_t kpagetable, uint64 kstack, int sz);
 
 // swtch.S
 void swtch(struct context *, struct context *);
@@ -184,8 +184,10 @@ int copyinstr(pagetable_t, char *, uint64, uint64);
 void vmprint(pagetable_t);
 pagetable_t vminit();
 void vmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm);
-void unvminit(pagetable_t pagetable);
+void unvminit(pagetable_t pagetable, int sz);
 void freewalk(pagetable_t pagetable);
+void prockernelfreewalk(pagetable_t pagetable);
+int u2kvmcopy(pagetable_t old, pagetable_t new, uint64 begin, uint64 sz);
 
 //vmcopyin.c
 int copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len);

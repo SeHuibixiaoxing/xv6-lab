@@ -23,6 +23,7 @@ extern char trampoline[]; // trampoline.S
 void kvminit()
 {
   kernel_pagetable = vminit();
+  vmmap(kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 }
 
 pagetable_t vminit()
@@ -38,7 +39,7 @@ pagetable_t vminit()
   vmmap(new_kernel_pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // CLINT
-  vmmap(new_kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  //vmmap(new_kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 
   // PLIC
   vmmap(new_kernel_pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
@@ -56,7 +57,7 @@ pagetable_t vminit()
   return new_kernel_pagetable;
 }
 
-void unvminit(pagetable_t pagetable)
+void unvminit(pagetable_t pagetable, int sz)
 {
   // uart registers
   uvmunmap(pagetable, UART0, 1, 0);
@@ -65,7 +66,7 @@ void unvminit(pagetable_t pagetable)
   uvmunmap(pagetable, VIRTIO0, 1, 0);
 
   // CLINT
-  uvmunmap(pagetable, CLINT, 0x10000 / PGSIZE, 0);
+  //uvmunmap(pagetable, CLINT, 0x10000 / PGSIZE, 0);
 
   // PLIC
   uvmunmap(pagetable, PLIC, 0x400000 / PGSIZE, 0);
@@ -249,11 +250,11 @@ void uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for (a = va; a < va + npages * PGSIZE; a += PGSIZE)
   {
     if ((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+      return; //panic("uvmunmap: walk");
     if ((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+      return; //panic("uvmunmap: not mapped");
     if (PTE_FLAGS(*pte) == PTE_V)
-      panic("uvmunmap: not a leaf");
+      return; //panic("uvmunmap: not a leaf");
     if (do_free)
     {
       uint64 pa = PTE2PA(*pte);
@@ -364,6 +365,29 @@ void freewalk(pagetable_t pagetable)
   kfree((void *)pagetable);
 }
 
+// Recursively free page-table pages.
+// All leaf mappings must already have been removed.
+void prockernelfreewalk(pagetable_t pagetable)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for (int i = 0; i < 512; i++)
+  {
+    pte_t pte = pagetable[i];
+    if ((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
+    {
+      // this PTE points to a lower-level page table.
+      uint64 child = PTE2PA(pte);
+      prockernelfreewalk((pagetable_t)child);
+      pagetable[i] = 0;
+    }
+    else if (PTE2PA(pte) < CLINT && (pte & PTE_V))
+    {
+      panic("freewalk: leaf");
+    }
+  }
+  kfree((void *)pagetable);
+}
+
 // Free user memory pages,
 // then free page-table pages.
 void uvmfree(pagetable_t pagetable, uint64 sz)
@@ -417,34 +441,19 @@ err:
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
 //
-int u2kvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
+int u2kvmcopy(pagetable_t old, pagetable_t new, uint64 begin, uint64 sz)
 {
-  pte_t *pte;
-  uint64 pa, i;
-  uint flags;
-  if (sz > PLIC)
+  for (int i = begin; i < begin + sz; i += PGSIZE)
   {
-    return -1;
-  }
-
-  for (i = 0; i < sz; i += PGSIZE)
-  {
-    if ((pte = walk(old, i, 0)) == 0)
-      panic("u2kvmcopy: pte should exist");
-    if ((*pte & PTE_V) == 0)
-      panic("u2kvmcopy: page not present");
-    pa = PTE2PA(*pte);
-    flags = PTE_FLAGS(*pte) & (~PTE_U);
-    if (u2kmappages(new, i, PGSIZE, (uint64)pa, flags) != 0)
+    pte_t *pte = walk(old, i, 0);
+    pte_t *kpte = walk(new, i, 1);
+    if (pte == 0 || kpte == 0)
     {
-      goto err;
+      return -1;
     }
+    *kpte = (*pte) & ~PTE_U;
   }
   return 0;
-
-err:
-  uvmunmap(new, 0, i / PGSIZE, 1);
-  return -1;
 }
 
 // mark a PTE invalid for user access.
