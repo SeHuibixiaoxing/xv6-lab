@@ -9,8 +9,8 @@
 | Lab System calls | 21.09.18 | Syscall |
 | Lab Page tables | 21.09.29 | pgtbl |
 | Lab Traps | 21.10.04 | traps|
-| Lab Lazy allocation | 进行中| |
-| Lab Copy on-write | | |
+| Lab Lazy allocation | 21.10.06 | lazy |
+| Lab Copy on-write | 进行中 | |
 | Lab Multithreading | | |
 | Lab Lock | | |
 | Lab File system | 21.06.08 | fs |
