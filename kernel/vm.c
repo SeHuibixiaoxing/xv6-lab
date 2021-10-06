@@ -526,7 +526,7 @@ void vmprintfree(pagetable_t pagetable, int layer)
 
       if ((pte & (PTE_R | PTE_W | PTE_X)) == 0)
       {
-        // thie PTE points to a lower-level page table.
+        // this PTE points to a lower-level page table.
         vmprintfree((pagetable_t)child, layer + 1);
       }
     }
