@@ -28,12 +28,14 @@ void find_prime(int *p)
     {
         //子进程，递归地筛选，new_p存放被prime及其之前素数筛过的数
         close(new_p[1]);
+        printf("pid:%d, new_p[1]:%d\n", getpid(), new_p[1]);
         find_prime(new_p);
         exit(0);
     }
     else
     {
         close(new_p[0]);
+        printf("pid:%d, new_p[1]:%d\n", getpid(), new_p[1]);
         //从管道p读数，用prime筛，直到读完
         int re = -1;
         while (1)
@@ -53,9 +55,6 @@ void find_prime(int *p)
         {
             wait_pid = wait(0);
         } while (pid != wait_pid);
-        wait(0);
-
-        close(p[0]);
     }
 
     return;
