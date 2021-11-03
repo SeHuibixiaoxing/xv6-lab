@@ -12,7 +12,7 @@
 | Lab Lazy allocation | 21.10.06 | lazy |
 | Lab Copy on-write | 21.10.27 | cow |
 | Lab Multithreading | 21.11.01 | thread |
-| Lab Lock | 进行中 | |
+| Lab Lock | 21.11.03 | lock |
 | Lab File system | 21.06.08 | fs |
-| Lab mmap | | |
+| Lab mmap | 进行中 | |
 | Lab network driver | | |
